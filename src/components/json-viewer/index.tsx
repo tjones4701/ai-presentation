@@ -13,7 +13,7 @@ export const JsonViewer: React.FC<Props> = ({ children }) => {
                 <ul>
                     {Object.entries(children).map(([key, value]) => (
                         <li key={key}>
-                            {key}: <JsonViewer children={value} />
+                            {key}: <JsonViewer>{children}</JsonViewer>
                         </li>
                     ))}
                 </ul>

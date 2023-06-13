@@ -1,6 +1,4 @@
-import { JsonViewer } from "@/components/json-viewer";
-import { createChatCompletion } from "@/server/open-ai/ai";
-import { Slide, generateImage, generatePresentation, generateSlide } from "@/server/presentation-generator";
+import { Slide, generateImage, generatePresentation } from "@/server/presentation-generator";
 import styles from "./page.module.scss";
 
 export type Presentation = {
