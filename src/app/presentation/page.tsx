@@ -1,28 +1,39 @@
 import { JsonViewer } from "@/components/json-viewer";
 import { createChatCompletion } from "@/server/open-ai/ai";
+import { Slide, generateImage, generatePresentation, generateSlide } from "@/server/presentation-generator";
+import styles from "./page.module.scss";
 
 export type Presentation = {
   topic: string;
   outcome: string;
+  presentor: string;
   themes: string[];
+}
+
+
+const SlideImage: React.FC<{ children: string }> = ({ children }) => {
+  if (children == null || children == "") {
+    return <></>
+  }
+  return <img className={styles.image} src={children} />
+};
+
+const Slide: React.FC<Slide> = (props) => {
+  return <div className={styles.slide} style={{ "color": props.textColor, backgroundColor: props.backgroundColor }}>
+    <h1>{props.title}</h1>
+    <SlideImage>{props.imageSrc ?? ""}</SlideImage>
+    <p className={styles.slideBody}>{props.body}</p>
+  </div>;
 }
 // `app/dashboard/page.tsx` is the UI for the `/dashboard` URL
 export default async function Page() {
-  const presentation: Presentation = {
-    topic: "The movie waterworld",
-    themes: ["exciting", "plot twist"],
-    outcome: "Rent from blockbuster"
+  const presentation = await generatePresentation();
+  const data = await generateImage("Poodle in a blue suit");
+  const slides = [];
+  for (const i in presentation.slideOverviews) {
+    const overview = presentation.slideOverviews[i as any];
+    slides.push(<Slide key={overview.title} {...overview} />);
   }
-
-  const promptParts = [`I would like you to create a short presentation based on the following:`];
-  promptParts.push(presentation.topic);
-  promptParts.push(`The themes of the presentation should be:`);
-  promptParts.push(presentation.themes.join(", "));
-  promptParts.push("This presentation should have the goal of promoting the following outcome:");
-  promptParts.push(presentation.outcome);
-  promptParts.push("When creating this presentation please structure this in the form of slides. With slide starting with the following text: ##SLIDE##");
-
-  const prompt = promptParts.join("\n");
-  const data = await createChatCompletion(prompt);
-  return <JsonViewer>{data}</JsonViewer>
+  return <div className={styles.presentation}>{slides}</div>
 }
+

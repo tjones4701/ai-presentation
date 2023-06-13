@@ -2,7 +2,7 @@
 import { Configuration, OpenAIApi } from "openai"
 export async function createChatCompletion(prompt: string): Promise<string> {
     const configuration = new Configuration({
-        apiKey: process.env.OPENAI_API_KEY,
+        apiKey: process.env.OPEN_API_KEY,
     });
     const openai = new OpenAIApi(configuration);
     try {
@@ -14,6 +14,7 @@ export async function createChatCompletion(prompt: string): Promise<string> {
 
         return completion.data.choices?.[0]?.message?.content ?? "";
     } catch (error) {
+        console.log(error);
         return "";
     }
 }
