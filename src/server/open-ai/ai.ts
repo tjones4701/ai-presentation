@@ -21,14 +21,25 @@ export async function createChatCompletion(prompt: string): Promise<string> {
     }
 }
 
-export async function createImage(prompt: string): Promise<string> {
+export type ImageStore = {
+    generating?: boolean;
+    url?: string;
+}
 
-    console.debug(`Generating image for ${prompt}`)
-    const existingImage = await getCachedValue<string>(prompt);
-    if (existingImage != null) {
-        console.debug(`Image found in cache`);
+export async function createImage(prompt: string): Promise<ImageStore> {
+
+
+    const existingImage: ImageStore = await getCachedValue<ImageStore>(prompt) ?? {};
+    if (existingImage?.generating) {
         return existingImage;
     }
+    if (existingImage?.url) {
+        return existingImage;
+    }
+    console.debug(`Generating image for ${prompt}`)
+    existingImage.generating = true;
+    await setCachedValue(prompt, existingImage);
+
     console.debug(`New image being generated`);
 
     const { Configuration, OpenAIApi } = require("openai");
@@ -44,6 +55,8 @@ export async function createImage(prompt: string): Promise<string> {
 
     const url = response?.data?.data?.[0]?.url;
 
-    await setCachedValue(prompt, url);
-    return url;
+    existingImage.generating = false;
+    existingImage.url = url;
+    await setCachedValue(prompt, existingImage);
+    return existingImage;
 }

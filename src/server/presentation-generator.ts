@@ -38,10 +38,11 @@ async function generatePresentor(prompt: string): Promise<string> {
     ];
     const feeling = feelings[Math.floor(Math.random() * feelings.length)];
     return await createChatCompletion(`Generate a very short description of someone who would give a ${feeling} presentation on the topic of ${prompt}. They shouldn't actually know anything about the topic though and should mention their job in their description.`);
-   
+
 }
 
 export type Presentation = {
+    generating?: boolean;
     topic?: string | null;
     slideOverviews?: Slide[] | null;
 }
@@ -56,19 +57,21 @@ export async function getCurrentPresentation(): Promise<Presentation | null> {
     return await getCachedValue<Presentation>(getPresentationKey());
 }
 
-export async function generatePresentation(generateNew = false,topic?: string | null) {
-    console.debug("Generating new presentation");
+export async function generatePresentation(generateNew = false, topic?: string | null) {
+
     const presentationKey = getPresentationKey();
 
-    let presentation: Presentation | null = {};
+    let presentation: Presentation = {};
 
     if (!generateNew) {
-        presentation = await getCachedValue<Presentation>(presentationKey);
-    }
-    if (presentation == null) {
-        presentation = {};
+        presentation = await getCachedValue<Presentation>(presentationKey) ?? {};
     }
 
+    if (presentation?.generating) {
+        return presentation;
+    }
+    presentation.generating = true;
+    await setCachedValue<Presentation>(presentationKey, presentation);
     if (presentation.topic == null) {
         if (topic == null) {
             console.debug("Generating topic");
@@ -76,22 +79,15 @@ export async function generatePresentation(generateNew = false,topic?: string | 
         } else {
             presentation.topic = topic;
         }
-    } else {
-        console.debug("Topic already generated");
     }
 
     if (presentation.slideOverviews == null) {
         console.debug("Generating slides");
         presentation.slideOverviews = await generateSlideOverview(presentation.topic);
-    } else {
-        console.debug("Slides already generated");
     }
 
-
-    console.debug("Presentation generated-saving");
-
+    presentation.generating = false;
     await setCachedValue<Presentation>(presentationKey, presentation);
-    console.debug("Presentation generation complete");
 
     return presentation;
 }
@@ -120,7 +116,7 @@ async function generateSlideOverview(prompt: string): Promise<Slide[]> {
     promptParts.push("Please generate this in a json structure matching the following:");
     promptParts.push(JSON.stringify(exampleSlide));
 
-    
+
     promptParts.push("Other important things to note:");
     promptParts.push("In the image description field please create a descriptive image that will go along with the slide");
     const presentor = await generatePresentor(prompt);

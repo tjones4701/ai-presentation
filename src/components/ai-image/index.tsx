@@ -7,7 +7,10 @@ interface Props {
 
 export const OpenAIImage: React.FC<Props> = async ({ children, className }) => {
     const src = await createImage(children);
+    if (src.generating) {
+        return <span>Generating image.....</span>;
+    }
     return (
-        <img alt={children} className={`${styles?.image} ${className}`} src={src} />
+        <img alt={children} className={`${styles?.image} ${className}`} src={src.url} />
     );
 };

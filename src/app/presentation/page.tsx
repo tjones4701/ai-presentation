@@ -4,6 +4,8 @@ import styles from "./ai-presentation.module.scss";
 import { Suspense } from "react";
 import { OpenAIImage } from "@/components/ai-image";
 import { Donate } from "@/components/donate";
+import { sleep } from "@/utilities/sleep";
+import Loading from "./loading";
 
 export type SlideProps = Slide & { noImages: boolean }
 const SlideElement: React.FC<SlideProps> = (props) => {
@@ -37,6 +39,9 @@ export default async function Page(context: { searchParams: Record<string, any> 
 
     if (presentation == null) {
         return <div>Error creating presentation</div>
+    }
+    if (presentation.generating) {
+        return <Loading />
     }
     const slides = [];
     for (const i in presentation.slideOverviews) {
