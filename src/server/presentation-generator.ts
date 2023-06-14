@@ -75,6 +75,7 @@ export type Slide = {
     textColor: string;
 }
 export async function generateSlideOverview(prompt: string): Promise<Slide[]> {
+
     const exampleSlide: Slide[] = [{
         "title": "{title}",
         "body": "{body}",
@@ -89,15 +90,22 @@ export async function generateSlideOverview(prompt: string): Promise<Slide[]> {
     promptParts.push("In the image description field please create a descriptive image that will go along with the slide");
     promptParts.push(JSON.stringify(exampleSlide));
 
-    const result = await createChatCompletion(promptParts.join("\n"));
     try {
-        const slides: Slide[] = JSON.parse(result);
-        return slides;
+        console.debug("Asking for completion for slides");
+        const result = await createChatCompletion(promptParts.join("\n"));
+        console.debug("Completion done");
+        try {
+            const slides: Slide[] = JSON.parse(result);
+            return slides;
+        } catch (e) {
+            console.error(e);
+        }
+
+        return [];
     } catch (e) {
         console.error(e);
+        return [];
     }
-
-    return [];
 }
 
 export async function generateImage(prompt: string) {
