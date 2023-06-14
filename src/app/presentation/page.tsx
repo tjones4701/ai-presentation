@@ -3,6 +3,7 @@ import { Slide, generatePresentation } from "@/server/presentation-generator";
 import styles from "./ai-presentation.module.scss";
 import { Suspense } from "react";
 import { OpenAIImage } from "@/components/ai-image";
+import { Donate } from "@/components/donate";
 
 export type SlideProps = Slide & { noImages: boolean }
 const SlideElement: React.FC<SlideProps> = (props) => {
@@ -47,6 +48,6 @@ export default async function Page(context: { searchParams: Record<string, any> 
             No slides found.
         </div>
     }
-    return <div className={styles.presentation}>{slides}</div>
+    return <div className={styles.presentation}>{slides}<Donate /></div>
 }
 
