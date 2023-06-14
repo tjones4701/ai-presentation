@@ -4,9 +4,23 @@ interface Props {
     className?: string;
 }
 
+
+export async function getImage(slide: string): Promise<string> {
+
+    const request = await fetch(`http://localhost:3000/api/images/${slide}`);
+    try {
+        return (await request?.json())?.src;
+    } catch (e) {
+        return "";
+    }
+}
+
 export const OpenAIImage: React.FC<Props> = async ({ children, className }) => {
-    const image = await createImage(children);
+    const src = await getImage(children);
+    if (src == "") {
+        return null;
+    }
     return (
-        <img className={className} src={image} />
+        <img alt={children} className={className} src={src} />
     );
 };

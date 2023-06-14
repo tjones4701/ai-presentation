@@ -29,10 +29,19 @@ export type Presentation = {
     slideOverviews?: Slide[] | null;
 }
 
-export async function generatePresentation(generateNew = false) {
-    console.debug("Generating new presentation");
+export function getPresentationKey() {
     const today = Date.now();
     const presentationKey = format(today, "yyyy-MM-dd");
+    return presentationKey;
+}
+
+export async function getCurrentPresentation(): Promise<Presentation | null> {
+    return await getCachedValue<Presentation>(getPresentationKey());
+}
+
+export async function generatePresentation(generateNew = false) {
+    console.debug("Generating new presentation");
+    const presentationKey = getPresentationKey();
 
     let presentation: Presentation | null = {};
 
@@ -84,7 +93,9 @@ async function generateSlideOverview(prompt: string): Promise<Slide[]> {
         textColor: "{textColor}"
     }];
 
-    const promptParts = [`I would like you to create a slideshow presentation with 3 to 5 slides based on the following:`];
+    const promptParts = [];
+    promptParts.push("Acting as a youtuber called Chad. Chad loves surfing and picking up used gum wrappers off the street.")
+    promptParts.push(`I would like you to create a slideshow presentation with 3 to 5 slides based on the following:`);
     promptParts.push(prompt);
     promptParts.push("Please generate this in a json structure matching the following:");
     promptParts.push("In the image description field please create a descriptive image that will go along with the slide");

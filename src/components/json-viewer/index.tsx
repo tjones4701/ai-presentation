@@ -7,6 +7,7 @@ export const JsonViewer: React.FC<Props> = ({ children }) => {
     if (children == null) {
         return <div>Null object</div>
     }
+    children = JSON.parse(JSON.stringify(children))
     return (
         <div>
             {typeof children === 'object' ? (
