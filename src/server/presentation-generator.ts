@@ -2,7 +2,7 @@ import { format } from 'date-fns'
 import { createChatCompletion } from "./open-ai/ai";
 import { getCachedValue, setCachedValue } from "./cache";
 
-export async function generateTopic(tryNumber = 0): Promise<string> {
+async function generateTopic(tryNumber = 0): Promise<string> {
     if (tryNumber > 10) {
         console.error("")
     }
@@ -74,7 +74,7 @@ export type Slide = {
     backgroundColor: string;
     textColor: string;
 }
-export async function generateSlideOverview(prompt: string): Promise<Slide[]> {
+async function generateSlideOverview(prompt: string): Promise<Slide[]> {
 
     const exampleSlide: Slide[] = [{
         "title": "{title}",
@@ -108,22 +108,7 @@ export async function generateSlideOverview(prompt: string): Promise<Slide[]> {
     }
 }
 
-export async function generateImage(prompt: string) {
-    const { Configuration, OpenAIApi } = require("openai");
-    const configuration = new Configuration({
-        apiKey: process.env.OPEN_API_KEY,
-    });
-    const openai = new OpenAIApi(configuration);
-    const response = await openai.createImage({
-        prompt: prompt,
-        n: 1,
-        size: "512x512",
-    });
-
-    return response?.data?.data?.[0]?.url;
-}
-
-export async function generateSlide(prompt: string) {
+async function generateSlide(prompt: string) {
     const exampleSlide = {
         "title": "{title}",
         "body": "{body}",
