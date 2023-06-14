@@ -1,0 +1,29 @@
+# Ignore files starting with . and no extension
+.*
+!.*.*
+!/**/.*.*
+!.storybook
+!.babelrc
+.env*
+
+# Built artifacts
+/serverDist/
+/.generated/
+/.next/
+
+# Misc
+/node_modules/
+web.config
+*.ico
+*.txt
+*.svg
+*.sh
+*.csv
+/public/
+/sitecore/
+/data/
+/vendor/
+
+cqu.code-workspace
+
+#

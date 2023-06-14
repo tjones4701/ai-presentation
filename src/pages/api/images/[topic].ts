@@ -1,7 +1,8 @@
 import { createImage } from "@/server/open-ai/ai";
 import { getCurrentPresentation } from "@/server/presentation-generator";
+import { NextApiRequest, NextApiResponse } from "next";
 
-export default async function handler(req, res) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     const topic = req?.query?.topic;
 
     const presentation = await getCurrentPresentation();

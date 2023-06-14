@@ -1,4 +1,5 @@
 import { createImage } from "@/server/open-ai/ai";
+import { sleep } from "@/utilities/sleep";
 interface Props {
     children: string;
     className?: string;
@@ -16,6 +17,7 @@ export async function getImage(slide: string): Promise<string> {
 }
 
 export const OpenAIImage: React.FC<Props> = async ({ children, className }) => {
+    await sleep(5000);
     const src = await getImage(children);
     if (src == "") {
         return null;
