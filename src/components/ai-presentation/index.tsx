@@ -17,7 +17,6 @@ const Slide: React.FC<Slide> = (props) => {
 
 // `app/dashboard/page.tsx` is the UI for the `/dashboard` URL
 export default async function AiPresentation() {
-  await sleep(1000);
   const regenerate = undefined;
 
   let presentation = await generatePresentation(regenerate !== undefined);
