@@ -1,6 +1,6 @@
-import { kv } from "@vercel/kv";
 import { format } from 'date-fns'
 import { createChatCompletion } from "./open-ai/ai";
+import { getCachedValue, setCachedValue } from "./cache";
 
 export async function generateTopic(tryNumber = 0): Promise<string> {
     if (tryNumber > 10) {
@@ -37,7 +37,7 @@ export async function generatePresentation(generateNew = false) {
     let presentation: Presentation | null = {};
 
     if (!generateNew) {
-        presentation = await kv.get<Presentation>(presentationKey);
+        presentation = await getCachedValue<Presentation>(presentationKey);
     }
     if (presentation == null) {
         presentation = {};
@@ -60,7 +60,7 @@ export async function generatePresentation(generateNew = false) {
 
     console.debug("Presentation generated-saving");
 
-    await kv.set<Presentation>(presentationKey, presentation);
+    await setCachedValue<Presentation>(presentationKey, presentation);
     console.debug("Presentation generation complete");
 
     return presentation;
