@@ -7,7 +7,7 @@ import { OpenAIImage } from "@/components/ai-image";
 export type SlideProps = Slide & { noImages: boolean }
 const SlideElement: React.FC<SlideProps> = (props) => {
     return <div className={styles.slide} style={{ "color": props.textColor, backgroundColor: props.backgroundColor }}>
-        <h1>{props.title}</h1>
+        <h1 className={styles.title}>{props.title}</h1>
         {!props?.noImages && <Suspense fallback={<div>Loading</div>}>
             <OpenAIImage className={styles.image}>{props.imageDescription}</OpenAIImage>
         </Suspense>
@@ -41,6 +41,11 @@ export default async function Page(context: { searchParams: Record<string, any> 
     for (const i in presentation.slideOverviews) {
         const overview = presentation.slideOverviews[i as any];
         slides.push(<SlideElement noImages={noImages} key={overview.title} {...overview} />);
+    }
+    if (slides.length == 0) {
+        return <div>
+            No slides found.
+        </div>
     }
     return <div className={styles.presentation}>{slides}</div>
 }

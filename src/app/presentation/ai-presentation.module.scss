@@ -1,14 +1,25 @@
+  
+.presentation {
+  background-color:grey;
+  display:flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
 .slide {
   background-color: white;
   margin: 40px;
   width: 90vw;
-  height: 90vh;
+  min-height: 90vh;
   display: flex;
   justify-content: center;
   align-items: center;
   flex-direction: column;
 }
-
+.title {
+  padding-left: 40px;
+  padding-right: 40px;
+}
 .slideBody {
   padding: 40px;
 }
