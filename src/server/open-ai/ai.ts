@@ -11,7 +11,7 @@ export async function createChatCompletion(prompt: string): Promise<string> {
 
         const completion = await openai.createChatCompletion({
             model: "gpt-3.5-turbo",
-            messages: [{ role: "system", content: prompt }],
+            messages: [{ role: "assistant", content: prompt }],
         });
 
         return completion.data.choices?.[0]?.message?.content ?? "";

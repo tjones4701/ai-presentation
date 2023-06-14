@@ -24,6 +24,23 @@ async function generateTopic(tryNumber = 0): Promise<string> {
     }
 }
 
+
+async function generatePresentor(prompt: string): Promise<string> {
+    const feelings = [
+        "funny",
+        "exciting",
+        "action packed",
+        "random",
+        "interesting",
+        "boring",
+        "inappropriate",
+        "uncomfortable",
+    ];
+    const feeling = feelings[Math.floor(Math.random() * feelings.length)];
+    return await createChatCompletion(`Generate a very short description of someone who would give a ${feeling} presentation on the topic of ${prompt}. They shouldn't actually know anything about the topic though and should mention their job in their description.`);
+   
+}
+
 export type Presentation = {
     topic?: string | null;
     slideOverviews?: Slide[] | null;
@@ -39,7 +56,7 @@ export async function getCurrentPresentation(): Promise<Presentation | null> {
     return await getCachedValue<Presentation>(getPresentationKey());
 }
 
-export async function generatePresentation(generateNew = false) {
+export async function generatePresentation(generateNew = false,topic?: string | null) {
     console.debug("Generating new presentation");
     const presentationKey = getPresentationKey();
 
@@ -53,8 +70,12 @@ export async function generatePresentation(generateNew = false) {
     }
 
     if (presentation.topic == null) {
-        console.debug("Generating topic");
-        presentation.topic = await generateTopic();
+        if (topic == null) {
+            console.debug("Generating topic");
+            presentation.topic = await generateTopic();
+        } else {
+            presentation.topic = topic;
+        }
     } else {
         console.debug("Topic already generated");
     }
@@ -94,22 +115,25 @@ async function generateSlideOverview(prompt: string): Promise<Slide[]> {
     }];
 
     const promptParts = [];
-    promptParts.push("Acting as a youtuber called Chad. Chad loves surfing and picking up used gum wrappers off the street.")
     promptParts.push(`I would like you to create a slideshow presentation with 3 to 5 slides based on the following:`);
     promptParts.push(prompt);
     promptParts.push("Please generate this in a json structure matching the following:");
-    promptParts.push("In the image description field please create a descriptive image that will go along with the slide");
     promptParts.push(JSON.stringify(exampleSlide));
 
+    
+    promptParts.push("Other important things to note:");
+    promptParts.push("In the image description field please create a descriptive image that will go along with the slide");
+    const presentor = await generatePresentor(prompt);
+    promptParts.push(`Write the presentation body and title if presented by someone who matches this description: ${presentor}`);
+    promptParts.push("When writing the body always try to include references to the persona and how it relates to their life.");
+
     try {
-        console.debug("Asking for completion for slides");
         const result = await createChatCompletion(promptParts.join("\n"));
-        console.debug("Completion done");
         try {
             const slides: Slide[] = JSON.parse(result);
             return slides;
         } catch (e) {
-            console.error(e);
+            console.error("ERROR", result);
         }
 
         return [];
@@ -117,22 +141,4 @@ async function generateSlideOverview(prompt: string): Promise<Slide[]> {
         console.error(e);
         return [];
     }
-}
-
-async function generateSlide(prompt: string) {
-    const exampleSlide = {
-        "title": "{title}",
-        "body": "{body}",
-        "image": "{image}"
-    }
-    const promptParts: string[] = [`I would like you to generate a json data structure for a slide. The json data structure should be as follows:`];
-    promptParts.push(JSON.stringify(exampleSlide));
-    promptParts.push('This slide should be about the following:');
-    promptParts.push(prompt);
-
-    const promptJoined = promptParts.join("\n");
-    const data = await createChatCompletion(promptJoined);
-
-    return data;
-
 }
