@@ -30,6 +30,7 @@ export type Presentation = {
 }
 
 export async function generatePresentation(generateNew = false) {
+    console.debug("Generating new presentation");
     const today = Date.now();
     const presentationKey = format(today, "yyyy-MM-dd");
 
@@ -40,22 +41,27 @@ export async function generatePresentation(generateNew = false) {
     }
     if (presentation == null) {
         presentation = {};
-        console.debug("Generating new presentation");
-    } else {
-        console.debug("Loading existing presentation");
-        console.log(presentation);
     }
 
     if (presentation.topic == null) {
         console.debug("Generating topic");
         presentation.topic = await generateTopic();
+    } else {
+        console.debug("Topic already generated");
     }
 
     if (presentation.slideOverviews == null) {
+        console.debug("Generating slides");
         presentation.slideOverviews = await generateSlideOverview(presentation.topic);
+    } else {
+        console.debug("Slides already generated");
     }
 
+
+    console.debug("Presentation generated-saving");
+
     await kv.set<Presentation>(presentationKey, presentation);
+    console.debug("Presentation generation complete");
 
     return presentation;
 }
@@ -86,10 +92,6 @@ export async function generateSlideOverview(prompt: string): Promise<Slide[]> {
     const result = await createChatCompletion(promptParts.join("\n"));
     try {
         const slides: Slide[] = JSON.parse(result);
-        for (const i in slides) {
-            const slide = slides[i];
-            slide.imageSrc = await generateImage(slide.imageDescription);
-        }
         return slides;
     } catch (e) {
         console.error(e);
