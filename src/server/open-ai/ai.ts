@@ -26,8 +26,18 @@ export type ImageStore = {
     url?: string;
 }
 
+const imagesBeingGenerated: Record<string, boolean> = {};
+const images: Record<string, ImageStore> = {};
+
 export async function createImage(prompt: string): Promise<ImageStore> {
 
+    if (imagesBeingGenerated[prompt]) {
+        return { generating: true };
+    }
+
+    if (images?.[prompt] != null) {
+        return images[prompt];
+    }
 
     const existingImage: ImageStore = await getCachedValue<ImageStore>(prompt) ?? {};
     if (existingImage?.generating) {
@@ -36,6 +46,7 @@ export async function createImage(prompt: string): Promise<ImageStore> {
     if (existingImage?.url) {
         return existingImage;
     }
+    imagesBeingGenerated[prompt] = true;
     console.debug(`Generating image for ${prompt}`)
     existingImage.generating = true;
     await setCachedValue(prompt, existingImage);
@@ -57,6 +68,8 @@ export async function createImage(prompt: string): Promise<ImageStore> {
 
     existingImage.generating = false;
     existingImage.url = url;
+    imagesBeingGenerated[prompt] = false;
+    images[prompt] = existingImage;
     await setCachedValue(prompt, existingImage);
     return existingImage;
 }
