@@ -2,10 +2,11 @@
 import { Slide, generatePresentation } from "@/server/presentation-generator";
 import styles from "./ai-presentation.module.scss";
 import { Suspense } from "react";
-import { OpenAIImage } from "@/components/ai-image";
-import { Donate } from "@/components/donate";
+import { OpenAIImage } from "@/components/server/ai-image";
+import { Donate } from "@/components/server/donate";
 import { sleep } from "@/utilities/sleep";
 import Loading from "./loading";
+import PageRefresher from "@/components/client/page-refresher";
 
 export type SlideProps = Slide & { noImages: boolean }
 const SlideElement: React.FC<SlideProps> = (props) => {
@@ -41,7 +42,7 @@ export default async function Page(context: { searchParams: Record<string, any> 
         return <div>Error creating presentation</div>
     }
     if (presentation.generating) {
-        return <Loading />
+        return <><Loading /><PageRefresher refreshInterval={10} /></>
     }
     const slides = [];
     for (const i in presentation.slideOverviews) {

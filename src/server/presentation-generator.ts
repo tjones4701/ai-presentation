@@ -1,6 +1,7 @@
 import { format } from 'date-fns'
 import { createChatCompletion } from "./open-ai/ai";
 import { getCachedValue, setCachedValue } from "./cache";
+import { timings } from '@/utilities/timings';
 
 async function generateTopic(tryNumber = 0): Promise<string> {
     if (tryNumber > 10) {
@@ -42,52 +43,66 @@ async function generatePresentor(prompt: string): Promise<string> {
 }
 
 export type Presentation = {
+    creationDuration?: number;
+    createdAt?: number;
+    expiry?: number;
     generating?: boolean;
     topic?: string | null;
     slideOverviews?: Slide[] | null;
 }
 
-export function getPresentationKey() {
-    const today = Date.now();
-    const presentationKey = format(today, "yyyy-MM-dd");
-    return presentationKey;
+export async function getCurrentPresentation(): Promise<Presentation | null> {
+    return await getCachedValue<Presentation>("presentation");
 }
 
-export async function getCurrentPresentation(): Promise<Presentation | null> {
-    return await getCachedValue<Presentation>(getPresentationKey());
-}
+let isGenerating = false;
+const presentationDuration = timings.minute * 1;
 
 export async function generatePresentation(generateNew = false, topic?: string | null) {
 
-    const presentationKey = getPresentationKey();
+    const startNow = Date.now();
 
     let presentation: Presentation = {};
 
-    if (!generateNew) {
-        presentation = await getCachedValue<Presentation>(presentationKey) ?? {};
+    // If we are currently generating a presentation then just return it.
+    presentation = await getCachedValue<Presentation>("presentation") ?? {};
+    if (presentation?.generating || isGenerating) {
+        console.debug("Already generating presentation");
+        return presentation ?? { generating: true };
     }
 
-    if (presentation?.generating) {
+
+    if ((presentation?.expiry ?? 0) < startNow) {
+        console.debug("Presentation Expired");
+        generateNew = true;
+    }
+
+    if (!generateNew) {
+        console.debug("Returning existing presentation");
         return presentation;
     }
+    console.debug("Creating new presentation");
+
     presentation.generating = true;
-    await setCachedValue<Presentation>(presentationKey, presentation);
-    if (presentation.topic == null) {
-        if (topic == null) {
-            console.debug("Generating topic");
-            presentation.topic = await generateTopic();
-        } else {
-            presentation.topic = topic;
-        }
+    await setCachedValue<Presentation>("presentation", presentation);
+
+    if (topic == null) {
+        console.debug("Generating topic");
+        presentation.topic = await generateTopic();
+    } else {
+        presentation.topic = topic;
     }
 
-    if (presentation.slideOverviews == null) {
-        console.debug("Generating slides");
-        presentation.slideOverviews = await generateSlideOverview(presentation.topic);
-    }
+    console.debug("Generating slides");
+    presentation.slideOverviews = await generateSlideOverview(presentation.topic);
 
+    const endNow = Date.now();
     presentation.generating = false;
-    await setCachedValue<Presentation>(presentationKey, presentation);
+    presentation.createdAt = endNow;
+    presentation.expiry = endNow + presentationDuration;
+    presentation.creationDuration = endNow - startNow;
+    console.debug(`Presentation created in ${presentation.creationDuration}`);
+    await setCachedValue<Presentation>("presentation", presentation);
 
     return presentation;
 }
