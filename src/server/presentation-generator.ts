@@ -56,7 +56,7 @@ export async function getCurrentPresentation(): Promise<Presentation | null> {
 }
 
 let isGenerating = false;
-const presentationDuration = timings.minute * 1;
+const presentationDuration = timings.minute * 10;
 
 export async function generatePresentation(generateNew = false, topic?: string | null) {
 
