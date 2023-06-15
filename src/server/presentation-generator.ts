@@ -50,7 +50,7 @@ async function generatePresentor(prompt: string): Promise<string> {
     const backgrounds = [
         "They shouldn't actually know anything about the topic though",
         "They are an expert in the topic",
-        "They know a little about the topic topic",
+        "They know a little about the topic",
     ]
     const feeling = feelings[Math.floor(Math.random() * feelings.length)];
     const background = backgrounds[Math.floor(Math.random() * backgrounds.length)];

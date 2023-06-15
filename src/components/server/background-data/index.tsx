@@ -11,7 +11,7 @@ export const Donate: React.FC<DonateProps> = ({ transparentBackground }) => {
     if (transparentBackground !== true) {
         className = `${className} ${styles.backgroundColour}`
     }
-    console.log(className);
+
     return (
         <div className={className}>
             <div className={styles.donate}>
