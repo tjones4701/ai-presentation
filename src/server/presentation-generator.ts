@@ -36,9 +36,25 @@ async function generatePresentor(prompt: string): Promise<string> {
         "boring",
         "inappropriate",
         "uncomfortable",
+        "sad",
+        "awkward",
+        "confusing",
+        "scary",
+        "weird",
+        "unusual",
+        "uncomfortable",
+        "unusual",
+        "mind bending",
+        "mind blowing",
     ];
+    const backgrounds = [
+        "They shouldn't actually know anything about the topic though",
+        "They are an expert in the topic",
+        "They know a little about the topic topic",
+    ]
     const feeling = feelings[Math.floor(Math.random() * feelings.length)];
-    return await createChatCompletion(`Generate a very short description of someone who would give a ${feeling} presentation on the topic of ${prompt}. They shouldn't actually know anything about the topic though and should mention their job in their description.`);
+    const background = backgrounds[Math.floor(Math.random() * backgrounds.length)];
+    return await createChatCompletion(`Generate a very short description of someone who would give a ${feeling} presentation on the topic of ${prompt}. ${background} and should mention their job in their description.`);
 
 }
 
@@ -56,7 +72,7 @@ export async function getCurrentPresentation(): Promise<Presentation | null> {
 }
 
 let isGenerating = false;
-const presentationDuration = timings.minute * 10;
+const presentationDuration = timings.minute * 30;
 
 export async function generatePresentation(generateNew = false, topic?: string | null) {
 
@@ -126,7 +142,7 @@ async function generateSlideOverview(prompt: string): Promise<Slide[]> {
     }];
 
     const promptParts = [];
-    promptParts.push(`I would like you to create a slideshow presentation with 3 to 5 slides based on the following:`);
+    promptParts.push(`I would like you to create a slideshow presentation with 3 to 7 slides based on the following:`);
     promptParts.push(prompt);
     promptParts.push("Please generate this in a json structure matching the following:");
     promptParts.push(JSON.stringify(exampleSlide));

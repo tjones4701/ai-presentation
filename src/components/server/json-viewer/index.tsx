@@ -1,26 +1,15 @@
+'use client';
+import 'react-json-view-lite/dist/index.css';
+import { JsonView, darkStyles, defaultStyles } from 'react-json-view-lite';
 import styles from "./json-viewer.module.scss";
 interface Props {
     children: any;
 }
 
 export const JsonViewer: React.FC<Props> = ({ children }) => {
-    if (children == null) {
-        return <div>Null object</div>
-    }
-    children = JSON.parse(JSON.stringify(children))
+    const newStyle = { ...darkStyles };
+    newStyle.container = `${newStyle.container} ${styles.container}`;
     return (
-        <div>
-            {typeof children === 'object' ? (
-                <ul>
-                    {Object.entries(children).map(([key, value]) => (
-                        <li key={key}>
-                            {key}: <JsonViewer>{children}</JsonViewer>
-                        </li>
-                    ))}
-                </ul>
-            ) : (
-                <span className={styles.span}>{children}</span>
-            )}
-        </div>
+        <JsonView data={children} shouldInitiallyExpand={(_level, _value) => false} style={newStyle} />
     );
 };

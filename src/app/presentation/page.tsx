@@ -4,7 +4,6 @@ import styles from "./ai-presentation.module.scss";
 import { Suspense } from "react";
 import { OpenAIImage } from "@/components/server/ai-image";
 import { Donate } from "@/components/server/donate";
-import { sleep } from "@/utilities/sleep";
 import Loading from "./loading";
 import PageRefresher from "@/components/client/page-refresher";
 
@@ -54,6 +53,8 @@ export default async function Page(context: { searchParams: Record<string, any> 
             No slides found.
         </div>
     }
-    return <div className={styles.presentation}>{slides}<Donate /></div>
+    return <div className={styles.presentation}>{slides}
+        <Donate />
+    </div>
 }
 
