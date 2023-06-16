@@ -6,6 +6,7 @@ import { OpenAIImage } from "@/components/server/ai-image";
 import { Donate } from "@/components/server/donate";
 import Loading from "./loading";
 import PageRefresher from "@/components/client/page-refresher";
+import { JsonViewer } from "@/components/server/json-viewer";
 
 export type SlideProps = Slide & { noImages: boolean }
 const SlideElement: React.FC<SlideProps> = (props) => {
@@ -40,12 +41,29 @@ export default async function Page(context: { searchParams: Record<string, any> 
     if (presentation == null) {
         return <div>Error creating presentation</div>
     }
-    if (presentation.generating) {
+    if (presentation.generating && presentation.old == null) {
         return <><Loading /><PageRefresher refreshInterval={10} /></>
     }
+
+    if (context?.searchParams?.debug !== undefined) {
+        return <div className={styles.debug}>
+            <h1>
+                Debug View
+            </h1>
+            <h2>Conversation Data</h2><p>Below are the conversations used to chat gpt. The result field is the field we extracted from the conversation.</p>
+            <JsonViewer expanded>{presentation?.conversations}</JsonViewer>
+            <h2>Full Data</h2><p>Below is the full data used to generate the slideshow.</p>
+            <JsonViewer expanded>{presentation?.conversations}</JsonViewer>
+        </div>
+    }
     const slides = [];
-    for (const i in presentation.slideOverviews) {
-        const overview = presentation.slideOverviews[i as any];
+
+    let slidesOverviews = presentation.slideOverviews;
+    if (presentation.generating) {
+        slidesOverviews = presentation.old;
+    }
+    for (const i in slidesOverviews) {
+        const overview = slidesOverviews[i as any];
         slides.push(<SlideElement noImages={noImages} key={overview.title} {...overview} />);
     }
     if (slides.length == 0) {
@@ -53,7 +71,9 @@ export default async function Page(context: { searchParams: Record<string, any> 
             No slides found.
         </div>
     }
-    return <div className={styles.presentation}>{slides}
+    return <div className={styles.presentation}>
+        {presentation.generating && <div><hr />Hold onto your shoes, we are creating a new presentation.<br /><i><small>This can take up to 2 minutes</small></i><hr /></div>}
+        {slides}
         <Donate />
     </div>
 }

@@ -2,31 +2,48 @@ import { format } from 'date-fns'
 import { createChatCompletion } from "./open-ai/ai";
 import { getCachedValue, setCachedValue } from "./cache";
 import { timings } from '@/utilities/timings';
+import { start } from 'repl';
 
-async function generateTopic(tryNumber = 0): Promise<string> {
+export type Conversation<T = string> = {
+    chat: string[],
+    result: T;
+}
+async function generateTopic(tryNumber = 0): Promise<Conversation> {
+    const result:Conversation = {
+        chat: [],
+        result: ""
+    };
     if (tryNumber > 10) {
         console.error("")
     }
     const exampleFormat = [{
-        "summary": "{summary}"
+        "topic": "{topic}"
     }];
     const randomYear = 2020 - Math.floor(Math.random() * 100);
-    const promptParts: string[] = [`Generate a json data structure in the format of:`];
+    const promptParts: string[] = [`Using the json format below:`];
     promptParts.push(JSON.stringify(exampleFormat));
-    promptParts.push(`This json data structure should contain interesting topics related to the year ${randomYear} for a presentor to talk about.`);
+    promptParts.push(`Create a list of interesting topics related to the year ${randomYear} for a presentor to talk about. Please reply with only the json data.`);
 
-    const parts = await createChatCompletion(promptParts.join("\n"));
+    const prompt = promptParts.join("\n");
+    result.chat.push(prompt);
+    const parts = await createChatCompletion(prompt);
+    result.chat.push(parts);
     try {
         const data = JSON.parse(parts);
         const randomRecord = data[Math.floor(Math.random() * data.length)];
-        return randomRecord?.summary;
+        result.result = randomRecord?.topic;
+        return result;
     } catch (e) {
         return await generateTopic(tryNumber + 1);
     }
 }
 
 
-async function generatePresentor(prompt: string): Promise<string> {
+async function generatePresentor(prompt: string): Promise<Conversation> {
+    const conversation: Conversation = {
+        chat: [],
+        result: ""
+    };
     const feelings = [
         "funny",
         "exciting",
@@ -54,17 +71,24 @@ async function generatePresentor(prompt: string): Promise<string> {
     ]
     const feeling = feelings[Math.floor(Math.random() * feelings.length)];
     const background = backgrounds[Math.floor(Math.random() * backgrounds.length)];
-    return await createChatCompletion(`Generate a very short description of someone who would give a ${feeling} presentation on the topic of ${prompt}. ${background} and should mention their job in their description.`);
+    const chat = `Generate a very short description of someone who would give a ${feeling} presentation on the topic of ${prompt}. ${background} and should mention their job in their description.`;
+    conversation.chat.push(chat);
+    const response = await createChatCompletion(chat);
+    conversation.chat.push(response);
+    conversation.result = response;
+    return conversation;
 
 }
 
 export type Presentation = {
     creationDuration?: number;
+    old?: any;
     createdAt?: number;
     expiry?: number;
     generating?: boolean;
     topic?: string | null;
     slideOverviews?: Slide[] | null;
+    conversations: Conversation<any>[];
 }
 
 export async function getCurrentPresentation(): Promise<Presentation | null> {
@@ -78,14 +102,22 @@ export async function generatePresentation(generateNew = false, topic?: string |
 
     const startNow = Date.now();
 
-    let presentation: Presentation = {};
+    let presentation: Presentation = {conversations: [], createdAt: startNow};
 
     // If we are currently generating a presentation then just return it.
-    presentation = await getCachedValue<Presentation>("presentation") ?? {};
+    presentation = await getCachedValue<Presentation>("presentation") ?? {
+        conversations: [],
+    };
     if (presentation?.generating || isGenerating) {
-        console.debug("Already generating presentation");
-        return presentation ?? { generating: true };
+        const timeout = (presentation?.createdAt ?? 0) + (timings.minute * 5);
+        if (timeout < startNow) {
+            generateNew = true;
+            console.debug("Presentation Generation Expired");
+        } else {            
+            return presentation ?? { generating: true };
+        }
     }
+
 
 
     if ((presentation?.expiry ?? 0) < startNow) {
@@ -97,20 +129,33 @@ export async function generatePresentation(generateNew = false, topic?: string |
         console.debug("Returning existing presentation");
         return presentation;
     }
+    presentation.old = presentation?.slideOverviews;
     console.debug("Creating new presentation");
 
+    presentation.conversations = [];
+
     presentation.generating = true;
+    presentation.createdAt = startNow;
     await setCachedValue<Presentation>("presentation", presentation);
 
     if (topic == null) {
         console.debug("Generating topic");
-        presentation.topic = await generateTopic();
+        const topicConversation = await generateTopic();
+        presentation.conversations.push(topicConversation);
+        presentation.topic = topicConversation.result;
     } else {
         presentation.topic = topic;
     }
 
+    const presentor = await generatePresentor(presentation.topic);
+    presentation.conversations?.push(presentor);
+
     console.debug("Generating slides");
-    presentation.slideOverviews = await generateSlideOverview(presentation.topic);
+    const slideOverviewsConversation = await generateSlideOverview(presentation.topic,presentor.result);
+    if (slideOverviewsConversation != null) {
+        presentation.conversations.push(slideOverviewsConversation);
+        presentation.slideOverviews =slideOverviewsConversation.result;
+    }
 
     const endNow = Date.now();
     presentation.generating = false;
@@ -118,6 +163,10 @@ export async function generatePresentation(generateNew = false, topic?: string |
     presentation.expiry = endNow + presentationDuration;
     presentation.creationDuration = endNow - startNow;
     console.debug(`Presentation created in ${presentation.creationDuration}`);
+    const existingPresentation = await getCachedValue<Presentation>("presentation");
+    if (existingPresentation?.createdAt != startNow) {
+        return existingPresentation;
+    }
     await setCachedValue<Presentation>("presentation", presentation);
 
     return presentation;
@@ -131,8 +180,12 @@ export type Slide = {
     backgroundColor: string;
     textColor: string;
 }
-async function generateSlideOverview(prompt: string): Promise<Slide[]> {
+async function generateSlideOverview(prompt: string, presentor: string): Promise<Conversation<Slide[]> | null> {
 
+    const conversation: Conversation<Slide[]> = {
+        chat: [],
+        result: []
+    }
     const exampleSlide: Slide[] = [{
         "title": "{title}",
         "body": "{body}",
@@ -150,22 +203,26 @@ async function generateSlideOverview(prompt: string): Promise<Slide[]> {
 
     promptParts.push("Other important things to note:");
     promptParts.push("In the image description field please create a descriptive image that will go along with the slide");
-    const presentor = await generatePresentor(prompt);
+
     promptParts.push(`Write the presentation body and title if presented by someone who matches this description: ${presentor}`);
     promptParts.push("When writing the body always try to include references to the persona and how it relates to their life.");
+    const promptJoined = promptParts.join("\n");
+    conversation.chat.push(promptJoined);
 
     try {
-        const result = await createChatCompletion(promptParts.join("\n"));
+        const result = await createChatCompletion(promptJoined);
+        conversation.chat.push(result);
         try {
             const slides: Slide[] = JSON.parse(result);
-            return slides;
+            conversation.result = slides;
+            return conversation;
         } catch (e) {
             console.error("ERROR", result);
         }
 
-        return [];
+        return null;
     } catch (e) {
         console.error(e);
-        return [];
+        return null;
     }
 }
