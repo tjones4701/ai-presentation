@@ -12,7 +12,7 @@ export type SlideProps = Slide & { noImages: boolean }
 const SlideElement: React.FC<SlideProps> = (props) => {
     return <div className={styles.slide} style={{ "color": props.textColor, backgroundColor: props.backgroundColor }}>
         <h1 className={styles.title}>{props.title}</h1>
-        {!props?.noImages && <Suspense fallback={<div>Loading</div>}>
+        {!props?.noImages && props.imageDescription != null && <Suspense fallback={<div>Loading</div>}>
             <OpenAIImage className={styles.image}>{props.imageDescription}</OpenAIImage>
         </Suspense>
         }
@@ -61,6 +61,9 @@ export default async function Page(context: { searchParams: Record<string, any> 
     let slidesOverviews = presentation.slideOverviews;
     if (presentation.generating) {
         slidesOverviews = presentation.old;
+    }
+    if (presentation.introduction != null) {
+        slides.push(<div className={styles.introduction}>{presentation.introduction}</div>);
     }
     for (const i in slidesOverviews) {
         const overview = slidesOverviews[i as any];

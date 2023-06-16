@@ -89,6 +89,7 @@ export type Presentation = {
     topic?: string | null;
     slideOverviews?: Slide[] | null;
     conversations: Conversation<any>[];
+    introduction?: string;
 }
 
 export async function getCurrentPresentation(): Promise<Presentation | null> {
@@ -157,11 +158,24 @@ export async function generatePresentation(generateNew = false, topic?: string |
         presentation.slideOverviews =slideOverviewsConversation.result;
     }
 
+    
+    console.debug("Generating introduction");
+    const intro = await presentationOverview(JSON.stringify({
+        "presentor": presentor?.result,
+        "slides": presentation.slideOverviews
+    }));
+    if (intro != null) {
+        presentation.conversations.push(intro);
+        presentation.introduction = intro?.result;
+    }
+
     const endNow = Date.now();
     presentation.generating = false;
     presentation.createdAt = endNow;
     presentation.expiry = endNow + presentationDuration;
     presentation.creationDuration = endNow - startNow;
+
+    
     console.debug(`Presentation created in ${presentation.creationDuration}`);
     const existingPresentation = await getCachedValue<Presentation>("presentation");
     if (existingPresentation?.createdAt != startNow) {
@@ -173,12 +187,34 @@ export async function generatePresentation(generateNew = false, topic?: string |
 }
 
 export type Slide = {
-    title: string;
+    title?: string;
     body: string;
-    imageDescription: string;
+    imageDescription?: string;
     imageSrc?: string;
-    backgroundColor: string;
-    textColor: string;
+    backgroundColor?: string;
+    textColor?: string;
+}
+
+async function presentationOverview(prompt:string): Promise<Conversation | null> {
+    const conversation: Conversation = {
+        chat: [],
+        result: ""
+    }
+    const promptParts: string[] = [`Acting as a presentation facilatator, please create a short introduction to the below presentation data.`];    
+    promptParts.push(prompt);
+    promptParts.push("After the introduction include a call to action to get people to donate using the link at the bottom of the page. This call to action should try to be relevant/related to the content of the presentation but isn't a donation for the presentation. It is instead a donation for a project that uses AI to generate the presentation.");
+    const promptJoined = promptParts.join("\n");
+    conversation.chat.push(promptJoined);
+    try {
+        const result = await createChatCompletion(promptJoined);
+        conversation.chat.push(result);
+        conversation.result = result;
+
+        return conversation;
+    } catch (e) {
+        console.error(e);
+        return null;
+    }
 }
 async function generateSlideOverview(prompt: string, presentor: string): Promise<Conversation<Slide[]> | null> {
 
