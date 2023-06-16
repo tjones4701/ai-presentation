@@ -11,6 +11,9 @@ export const OpenAIImage: React.FC<Props> = async ({ children, className }) => {
         return <span>Generating image.....</span>;
     }
     return (
-        <img alt={children} className={`${styles?.image} ${className}`} src={src.url} />
+        <>
+            <img alt={children} className={`${styles?.image} ${className}`} src={src.url} />
+            {src.error && <small><i>Error generating image, placeholder used instead</i></small>}
+        </>
     );
 };

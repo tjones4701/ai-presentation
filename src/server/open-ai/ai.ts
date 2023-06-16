@@ -24,6 +24,7 @@ export async function createChatCompletion(prompt: string): Promise<string> {
 export type ImageStore = {
     generating?: boolean;
     url?: string;
+    error?: boolean;
 }
 
 const imagesBeingGenerated: Record<string, boolean> = {};
@@ -46,30 +47,37 @@ export async function createImage(prompt: string): Promise<ImageStore> {
     if (existingImage?.url) {
         return existingImage;
     }
-    imagesBeingGenerated[prompt] = true;
-    console.debug(`Generating image for ${prompt}`)
-    existingImage.generating = true;
-    await setCachedValue(prompt, existingImage);
+    try {
+        imagesBeingGenerated[prompt] = true;
+        console.debug(`Generating image for ${prompt}`)
+        existingImage.generating = true;
+        await setCachedValue(prompt, existingImage);
 
-    console.debug(`New image being generated`);
+        console.debug(`New image being generated`);
 
-    const { Configuration, OpenAIApi } = require("openai");
-    const configuration = new Configuration({
-        apiKey: process.env.OPEN_API_KEY,
-    });
-    const openai = new OpenAIApi(configuration);
-    const response = await openai.createImage({
-        prompt: prompt,
-        n: 1,
-        size: "512x512",
-    });
+        const { Configuration, OpenAIApi } = require("openai");
+        const configuration = new Configuration({
+            apiKey: process.env.OPEN_API_KEY,
+        });
+        const openai = new OpenAIApi(configuration);
+        const response = await openai.createImage({
+            prompt: prompt,
+            n: 1,
+            size: "512x512",
+        });
 
-    const url = response?.data?.data?.[0]?.url;
+        const url = response?.data?.data?.[0]?.url;
 
-    existingImage.generating = false;
-    existingImage.url = url;
-    imagesBeingGenerated[prompt] = false;
-    images[prompt] = existingImage;
-    await setCachedValue(prompt, existingImage);
-    return existingImage;
+        existingImage.generating = false;
+        existingImage.url = url;
+        imagesBeingGenerated[prompt] = false;
+        images[prompt] = existingImage;
+        await setCachedValue(prompt, existingImage);
+        return existingImage;
+    } catch(e) {
+        images[prompt] = {generating: false, url: "https://picsum.photos/536/354", error: true};
+        imagesBeingGenerated[prompt] = false;
+        await setCachedValue(prompt, images[prompt]);
+        return images[prompt];
+    }
 }
