@@ -1,7 +1,8 @@
 
 'use server'
-import { Configuration, OpenAIApi } from "openai"
+import { Configuration, OpenAIApi } from "openai-edge"
 import { getCachedValue, setCachedValue } from "../cache";
+import { quickHash } from "@/utilities/quick-hash";
 export async function createChatCompletion(prompt: string): Promise<string> {
     const configuration = new Configuration({
         apiKey: process.env.OPEN_API_KEY,
@@ -14,7 +15,7 @@ export async function createChatCompletion(prompt: string): Promise<string> {
             messages: [{ role: "assistant", content: prompt }],
         });
 
-        return completion.data.choices?.[0]?.message?.content ?? "";
+        return (await completion.json()).choices?.[0]?.message?.content ?? "";
     } catch (error) {
         console.log(error);
         return "";
@@ -31,16 +32,17 @@ const imagesBeingGenerated: Record<string, boolean> = {};
 const images: Record<string, ImageStore> = {};
 
 export async function createImage(prompt: string): Promise<ImageStore> {
+    const index = `image_${quickHash(prompt)}`;
 
-    if (imagesBeingGenerated[prompt]) {
+    if (imagesBeingGenerated[index]) {
         return { generating: true };
     }
 
-    if (images?.[prompt] != null) {
-        return images[prompt];
+    if (images?.[index] != null) {
+        return images[index];
     }
 
-    const existingImage: ImageStore = await getCachedValue<ImageStore>(prompt) ?? {};
+    const existingImage: ImageStore = await getCachedValue<ImageStore>(index) ?? {};
     if (existingImage?.generating) {
         return existingImage;
     }
@@ -48,14 +50,13 @@ export async function createImage(prompt: string): Promise<ImageStore> {
         return existingImage;
     }
     try {
-        imagesBeingGenerated[prompt] = true;
+        imagesBeingGenerated[index] = true;
         console.debug(`Generating image for ${prompt}`)
         existingImage.generating = true;
-        await setCachedValue(prompt, existingImage);
+        await setCachedValue(index, existingImage);
 
         console.debug(`New image being generated`);
 
-        const { Configuration, OpenAIApi } = require("openai");
         const configuration = new Configuration({
             apiKey: process.env.OPEN_API_KEY,
         });
@@ -66,18 +67,19 @@ export async function createImage(prompt: string): Promise<ImageStore> {
             size: "512x512",
         });
 
-        const url = response?.data?.data?.[0]?.url;
+        const json = await response?.json();
+        const url = json?.data?.[0]?.url;
 
         existingImage.generating = false;
         existingImage.url = url;
-        imagesBeingGenerated[prompt] = false;
-        images[prompt] = existingImage;
-        await setCachedValue(prompt, existingImage);
+        imagesBeingGenerated[index] = false;
+        images[index] = existingImage;
+        await setCachedValue(index, existingImage);
         return existingImage;
-    } catch(e) {
-        images[prompt] = {generating: false, url: "https://picsum.photos/536/354", error: true};
-        imagesBeingGenerated[prompt] = false;
-        await setCachedValue(prompt, images[prompt]);
-        return images[prompt];
+    } catch (e) {
+        images[index] = { generating: false, url: "https://picsum.photos/536/354", error: true };
+        imagesBeingGenerated[index] = false;
+        await setCachedValue(index, images[index]);
+        return images[index];
     }
 }
