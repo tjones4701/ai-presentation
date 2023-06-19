@@ -20,4 +20,5 @@ model Presentation {
   expiry          Int
   topic           String
   slideOverviews  Json
+  conversation    Json
 }

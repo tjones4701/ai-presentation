@@ -1,6 +1,8 @@
 import { createChatCompletion, createImage } from "@/server/open-ai/ai";
 import { Job } from "./jobs";
 import { Conversation } from "@/server/presentation-generator";
+import { GeneratorPresentor } from "./generate-presentor";
+import { GeneratePresentationJob } from "./generate-presentation";
 
 async function generateTopic(tryNumber = 0): Promise<Conversation> {
     const result: Conversation = {
@@ -34,10 +36,10 @@ async function generateTopic(tryNumber = 0): Promise<Conversation> {
 
 
 export class GenerateTopicJob extends Job<{ presentationId: string }> {
-    topic = 'generate-topic';
     async onRun(): Promise<void> {
+        const presentationId = this.getParameter("presentationId");
         const topic = await generateTopic();
-
-
+        await GeneratePresentationJob.setTopic(presentationId,topic);
+        new GeneratorPresentor({ presentationId: presentationId, topic: topic.result });
     }
 }

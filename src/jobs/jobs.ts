@@ -1,33 +1,43 @@
 import { getCachedValue, setCachedValue } from "@/server/cache";
 import { uuid } from "../utilities/uuid";
-
-export interface IJob<T> {
-    id: string;
-    static get topic(): string;
-    parameters: T;
-    running: boolean;
-}
+import { IJob } from "./job-types";
 
 const JOBS_REDIS_KEY = "jobs";
+
 export class Job<T> implements IJob<T> {
     id: string;
-    topic: string = "job";
     parameters: T
     running: boolean;
 
 
-    constructor(parameters: T, addToQueue = true) {
-        this.id = uuid();
+    constructor(parameters: T, isNew = true) {
         this.parameters = parameters;
         this.running = false;
-        if (addToQueue) {
+        console.log("New job created " + this.constructor.name);
+        if (isNew) {
+            this.id = uuid();
             this.save();
+        } else {
+            this.id = "";
         }
     }
 
     static async getJobs(): Promise<Record<string, IJob<any>>> {
         const existingData = await getCachedValue<Record<string, IJob<any>>>(JOBS_REDIS_KEY);
         return existingData ?? {};
+    }
+    static async clearAll(): Promise<void> {
+        await setCachedValue(JOBS_REDIS_KEY, {});
+    }
+
+    static async getFirstJobToRun(): Promise<IJob<any> | null> {
+        const jobs = await Job.getJobs();
+        for(const i in jobs) {
+            if (jobs[i].running == false) {
+                return jobs[i];
+            }
+        }
+        return null;
     }
 
     static async getJob<A>(id: string): Promise<IJob<A> | null> {
@@ -52,13 +62,20 @@ export class Job<T> implements IJob<T> {
         setCachedValue(JOBS_REDIS_KEY, existingData);
     }
     async run(): Promise<void> {
+        if (this.running) {
+            return;
+        }
+        console.log("Running job", this.constructor.name, this.id);
         this.running = true;
+        
         await this.save();
+
         try {
             await this.onRun();
         } catch (e) {
-
+            console.error(e);
         }
+        console.log("Job finished", this.constructor.name, this.id);
         await this.delete();
     }
 
@@ -77,7 +94,7 @@ export class Job<T> implements IJob<T> {
 
     serialize(): IJob<T> {
         return {
-            topic: this.topic,
+            topic: this.constructor.name,
             parameters: this.parameters,
             id: this.id,
             running: this.running
